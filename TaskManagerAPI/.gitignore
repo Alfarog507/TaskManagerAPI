@@ -1,0 +1,12 @@
+# Visual Studio
+.vs/
+*.vsidx
+*.vscode
+*.user
+*.suo
+*.userprefs
+
+# Ignorar configuraciones de entorno
+appsettings.json
+appsettings.Development.json
+
