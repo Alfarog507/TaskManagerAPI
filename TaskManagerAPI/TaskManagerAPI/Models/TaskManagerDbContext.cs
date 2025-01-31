@@ -6,13 +6,16 @@ namespace TaskManagerAPI.Models;
 
 public partial class TaskManagerDbContext : DbContext
 {
+    private readonly IConfiguration _configuration;
+
     public TaskManagerDbContext()
     {
     }
 
-    public TaskManagerDbContext(DbContextOptions<TaskManagerDbContext> options)
+    public TaskManagerDbContext(DbContextOptions<TaskManagerDbContext> options, IConfiguration configuration)
         : base(options)
     {
+        _configuration = configuration;
     }
 
     public virtual DbSet<Categoria> Categorias { get; set; }
@@ -26,8 +29,12 @@ public partial class TaskManagerDbContext : DbContext
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=Gabriel_PC\\SQLEXPRESS;Database=TaskManagerDB;Trusted_Connection=True;TrustServerCertificate=True;");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer(_configuration.GetConnectionString("TaskManagerDatabase"));
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
