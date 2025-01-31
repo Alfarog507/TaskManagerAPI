@@ -10,10 +10,9 @@ builder.Services.AddSwaggerGen();
 
 
 // Add AppDbContext
-builder.Services.AddDbContext<TaskManagerDbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TaskManagerDatabase"));
-});
+builder.Services.AddDbContext<TaskManagerDbContext>((serviceProvider, options) =>
+    options.UseSqlServer(serviceProvider.GetRequiredService<IConfiguration>().GetConnectionString("TaskManagerDatabase")));
+
 
 var app = builder.Build();
 
