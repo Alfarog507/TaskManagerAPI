@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManagerAPI.Models;
 
@@ -17,86 +12,119 @@ namespace TaskManagerAPI.Controllers
 
         public EstadosTareasController(TaskManagerDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         // GET: api/EstadosTareas
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EstadosTarea>>> GetEstadosTareas()
         {
-            return await _context.EstadosTareas.ToListAsync();
+            try
+            {
+                var estadosTareas = await _context.EstadosTareas.ToListAsync();
+                return Ok(estadosTareas);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // GET: api/EstadosTareas/5
         [HttpGet("{id}")]
         public async Task<ActionResult<EstadosTarea>> GetEstadosTarea(int id)
         {
-            var estadosTarea = await _context.EstadosTareas.FindAsync(id);
-
-            if (estadosTarea == null)
+            try
             {
-                return NotFound();
-            }
+                var estadosTarea = await _context.EstadosTareas.AsNoTracking().FirstOrDefaultAsync(e => e.IdEstado == id);
 
-            return estadosTarea;
+                if (estadosTarea == null)
+                {
+                    return NotFound();
+                }
+                return Ok(estadosTarea);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // PUT: api/EstadosTareas/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutEstadosTarea(int id, EstadosTarea estadosTarea)
+        public async Task<IActionResult> PutEstadosTarea(int id, [FromBody] EstadosTarea estadosTarea)
         {
             if (id != estadosTarea.IdEstado)
             {
-                return BadRequest();
+                return BadRequest(new { mensaje = "El ID no coincide" });
             }
 
-            _context.Entry(estadosTarea).State = EntityState.Modified;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
             try
             {
+                _context.Entry(estadosTarea).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
+                return Ok(new { mensaje = "Estado de tarea actualizado" });
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!EstadosTareaExists(id))
                 {
-                    return NotFound();
+                    return NotFound(new { mensaje = "Estado de tarea no encontrado" });
                 }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error al actualizar el estado de tarea" });
             }
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // POST: api/EstadosTareas
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<EstadosTarea>> PostEstadosTarea(EstadosTarea estadosTarea)
+        public async Task<ActionResult<EstadosTarea>> PostEstadosTarea([FromBody] EstadosTarea estadosTarea)
         {
-            _context.EstadosTareas.Add(estadosTarea);
-            await _context.SaveChangesAsync();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return CreatedAtAction("GetEstadosTarea", new { id = estadosTarea.IdEstado }, estadosTarea);
+            try
+            {
+                _context.EstadosTareas.Add(estadosTarea);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction("GetEstadosTarea", new { id = estadosTarea.IdEstado }, estadosTarea);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // DELETE: api/EstadosTareas/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEstadosTarea(int id)
         {
-            var estadosTarea = await _context.EstadosTareas.FindAsync(id);
-            if (estadosTarea == null)
+            try
             {
-                return NotFound();
+                var estadosTarea = await _context.EstadosTareas.FindAsync(id);
+                if (estadosTarea == null)
+                {
+                    return NotFound(new { mensaje = "Estado de tarea no encontrado" });
+                }
+                _context.EstadosTareas.Remove(estadosTarea);
+                await _context.SaveChangesAsync();
+                return Ok(new { mensaje = "Estado de tarea eliminado" });
             }
-
-            _context.EstadosTareas.Remove(estadosTarea);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         private bool EstadosTareaExists(int id)
@@ -105,3 +133,4 @@ namespace TaskManagerAPI.Controllers
         }
     }
 }
+
