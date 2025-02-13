@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManagerAPI.Models;
 
@@ -17,86 +12,120 @@ namespace TaskManagerAPI.Controllers
 
         public CategoriasController(TaskManagerDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         // GET: api/Categorias
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Categoria>>> GetCategorias()
         {
-            return await _context.Categorias.ToListAsync();
+            try
+            {
+                var categorias = await _context.Categorias.ToListAsync();
+                return Ok(categorias);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // GET: api/Categorias/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Categoria>> GetCategoria(int id)
         {
-            var categoria = await _context.Categorias.FindAsync(id);
-
-            if (categoria == null)
+            try
             {
-                return NotFound();
-            }
+                var categoria = await _context.Categorias.AsNoTracking().FirstOrDefaultAsync(c => c.IdCategoria == id);
 
-            return categoria;
+                if (categoria == null)
+                {
+                    return NotFound();
+                }
+                return Ok(categoria);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // PUT: api/Categorias/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategoria(int id, Categoria categoria)
+        public async Task<IActionResult> PutCategoria(int id, [FromBody] Categoria categoria)
         {
             if (id != categoria.IdCategoria)
             {
-                return BadRequest();
+                return BadRequest(new { mensaje = "El ID no coincide" });
             }
 
-            _context.Entry(categoria).State = EntityState.Modified;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
 
             try
             {
+                _context.Entry(categoria).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
+                return Ok(new { mensaje = "Categoria actualizada" });
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!CategoriaExists(id))
                 {
-                    return NotFound();
+                    return NotFound(new { mensaje = "Categoría no encontrada" });
                 }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error al actualizar la categoría" });
             }
-
-            return NoContent();
+            catch(Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // POST: api/Categorias
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Categoria>> PostCategoria(Categoria categoria)
+        public async Task<ActionResult<Categoria>> PostCategoria([FromBody] Categoria categoria)
         {
-            _context.Categorias.Add(categoria);
-            await _context.SaveChangesAsync();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return CreatedAtAction("GetCategoria", new { id = categoria.IdCategoria }, categoria);
+            try
+            {
+                _context.Categorias.Add(categoria);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction("GetCategoria", new { id = categoria.IdCategoria }, categoria);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         // DELETE: api/Categorias/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategoria(int id)
         {
-            var categoria = await _context.Categorias.FindAsync(id);
-            if (categoria == null)
+            try
             {
-                return NotFound();
+                var categoria = await _context.Categorias.FindAsync(id);
+                if (categoria == null)
+                {
+                    return NotFound(new { mensaje = "Categoría no encontrada" });
+                }
+                _context.Categorias.Remove(categoria);
+                await _context.SaveChangesAsync();
+                return Ok(new { mensaje = "Categoría eliminada" });
             }
-
-            _context.Categorias.Remove(categoria);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         private bool CategoriaExists(int id)
