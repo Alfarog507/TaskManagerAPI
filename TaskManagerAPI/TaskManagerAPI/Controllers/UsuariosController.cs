@@ -1,18 +1,23 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManagerAPI.Models;
+using TaskManagerAPI.Services;
 
 namespace TaskManagerAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UsuariosController : ControllerBase
     {
         private readonly TaskManagerDbContext _context;
+        private readonly JwtService _jwtService;
 
-        public UsuariosController(TaskManagerDbContext context)
+        public UsuariosController(TaskManagerDbContext context, JwtService jwtService)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
         }
 
         // GET: api/Usuarios
